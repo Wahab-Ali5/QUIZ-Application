@@ -1,3 +1,19 @@
+// ============ Firebase Setup =============
+var firebaseConfig = {
+  apiKey: "AIzaSyDzJjdQflAnZhiGcSz-DBSQkVmhh1eFd3M",
+  authDomain: "quiz-application-3fe3a.firebaseapp.com",
+  databaseURL: "https://quiz-application-3fe3a-default-rtdb.firebaseio.com",
+  projectId: "quiz-application-3fe3a",
+  storageBucket: "quiz-application-3fe3a.firebasestorage.app",
+  messagingSenderId: "894995626347",
+  appId: "1:894995626347:web:ac80e2ef8492a9c3fff42e"
+};
+
+// Initialize Firebase
+var app = firebase.initializeApp(firebaseConfig);
+var database = firebase.database();
+
+// ============ Questions =============
 var questions = [
   {
     question: "Q1: HTML Stands for?",
@@ -23,7 +39,7 @@ var questions = [
   {
     question: "Which tag is used to make element unique ",
     option1: "id",
-    option2: "class  ",
+    option2: "class",
     option3: "label",
     corrAnswer: "id",
   },
@@ -71,64 +87,114 @@ var questions = [
   },
 ];
 
+// ============ Elements ============
 var quesElement = document.getElementById("ques");
 var opt1 = document.getElementById("option1");
 var opt2 = document.getElementById("option2");
 var opt3 = document.getElementById("option3");
-var index = 0;
 var nextBtn = document.getElementById("btn");
+var progressBar = document.getElementById("progressBar");
+
+var index = 0;
 var score = 0;
-var min = 1;
-var sec = 59;
 
+// ============ Functions ============
 function next() {
-  var allInputs = document.getElementsByTagName("input");
-
+  var allInputs = document.getElementsByName("options");
   for (var i = 0; i < allInputs.length; i++) {
     if (allInputs[i].checked) {
-      allInputs[i].checked = false;
       var userSelectedValue = allInputs[i].value;
-
       var selectedOption = questions[index - 1]["option" + userSelectedValue];
       var correctOption = questions[index - 1]["corrAnswer"];
-     
       if (selectedOption === correctOption) {
         score++;
       }
+      allInputs[i].checked = false;
     }
   }
 
   nextBtn.disabled = true;
 
-  if (index > questions.length - 1) {
-    Swal.fire({
-      title: "Good job!",
-      text: (score / questions.length) * 100,
-      icon: "success",
-    });
-    if ((score / questions.length) * 100 <=50) {
-    Swal.fire({
-      title: "Work Hard!",
-      text: (score / questions.length) * 100,
-      icon: "success",
-    });
-  }
-   if ((score / questions.length) * 100 <=30) {
-    Swal.fire({
-      title: "Try next time!",
-      text: (score / questions.length) * 100,
-      icon: "error",
-    });
-  }
+  if (index >= questions.length) {
+    saveAndRestart();
   } else {
     quesElement.innerText = questions[index].question;
     opt1.innerText = questions[index].option1;
     opt2.innerText = questions[index].option2;
     opt3.innerText = questions[index].option3;
     index++;
+    progressBar.style.width = ((index / questions.length) * 100) + "%";
   }
 }
 
 function tigger() {
   nextBtn.disabled = false;
+}
+
+function saveAndRestart() {
+  var percentage = (score / questions.length) * 100;
+  var userId = "user_" + Date.now();
+
+  database.ref("quizResults/" + userId).set({
+    score: score,
+    total: questions.length,
+    percentage: percentage.toFixed(2) + "%",
+    date: new Date().toLocaleString(),
+  });
+
+  Swal.fire({
+    title: "Quiz Completed!",
+    html: `<b>Score:</b> ${score}/${questions.length}<br>
+           <b>Percentage:</b> ${percentage.toFixed(2)}%`,
+    icon: "success",
+    confirmButtonText: "Restart Quiz"
+  }).then(() => {
+    restartQuiz();
+  });
+}
+
+function restartQuiz() {
+  index = 0;
+  score = 0;
+  progressBar.style.width = "0%";
+  next();
+}
+
+// ============ Start ============
+function next() {
+  if (index === 0) {
+    quesElement.innerText = questions[index].question;
+    opt1.innerText = questions[index].option1;
+    opt2.innerText = questions[index].option2;
+    opt3.innerText = questions[index].option3;
+    index++;
+    progressBar.style.width = ((index / questions.length) * 100) + "%";
+    return;
+  }
+
+  var allInputs = document.getElementsByName("options");
+  for (var i = 0; i < allInputs.length; i++) {
+    if (allInputs[i].checked) {
+      var userSelectedValue = allInputs[i].value;
+      var selectedOption = questions[index - 1]["option" + userSelectedValue];
+      var correctOption = questions[index - 1]["corrAnswer"];
+      if (selectedOption === correctOption) {
+        score++;
+      }
+      allInputs[i].checked = false;
+    }
+  }
+
+  nextBtn.disabled = true;
+
+  if (index >= questions.length) {
+    saveAndRestart();
+  } else {
+    quesElement.innerText = questions[index].question;
+    opt1.innerText = questions[index].option1;
+    opt2.innerText = questions[index].option2;
+    opt3.innerText = questions[index].option3;
+    index++;
+    progressBar.style.width = ((index / questions.length) * 100) + "%";
+  }
 }
